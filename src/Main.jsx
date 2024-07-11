@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import React from "react";
 
-function Event(props) {
+const Event = (props) => {
     const ref = useRef();
 
     const { onSize } = props;
@@ -25,7 +25,7 @@ function Event(props) {
             </button>
         </li>
     );
-}
+};
 
 const TABS = {
     all: {
@@ -162,44 +162,6 @@ for (let i = 0; i < 6; ++i) {
 }
 
 const Main = () => {
-    const ref = useRef();
-    const initedRef = useRef(false);
-    const [activeTab, setActiveTab] = useState("");
-    const [hasRightScroll, setHasRightScroll] = useState(false);
-
-    useEffect(() => {
-        if (!activeTab && !initedRef.current) {
-            initedRef.current = true;
-            setActiveTab(new URLSearchParams(location.search).get("tab") || "all");
-        }
-    }, []);
-
-    const onSelectInput = (event) => {
-        setActiveTab(event.target.value);
-    };
-
-    let sizes = 0;
-    const onSize = (size) => {
-        sizes += size;
-    };
-
-    useEffect(() => {
-        const newHasRightScroll = sizes > ref.current.offsetWidth;
-        if (newHasRightScroll !== hasRightScroll) {
-            setHasRightScroll(newHasRightScroll);
-        }
-    }, [activeTab]);
-
-    const onArrowCLick = () => {
-        const scroller = ref.current.querySelector(".section__panel:not(.section__panel_hidden)");
-        if (scroller) {
-            scroller.scrollTo({
-                left: scroller.scrollLeft + 400,
-                behavior: "smooth",
-            });
-        }
-    };
-
     return (
         <main className="main">
             <section className="section main__general">
@@ -281,10 +243,77 @@ const Main = () => {
                 </ul>
             </section>
 
-            <section className="section main__devices">
-                <div className="section__title">
-                    <h2 className="section__title-header">Избранные устройства</h2>
+            <BottomTabs />
+        </main>
+    );
+};
 
+export default Main;
+
+function getWindowSize() {
+    const { innerWidth } = window;
+    return innerWidth > 768;
+}
+
+const BottomTabs = () => {
+    const ref = useRef();
+    const initedRef = useRef(false);
+    const [activeTab, setActiveTab] = useState("");
+    const [hasRightScroll, setHasRightScroll] = useState(false);
+    const [windowSize, setWindowSize] = useState(getWindowSize());
+
+    useEffect(() => {
+        function handleWindowResize() {
+            setWindowSize(getWindowSize());
+        }
+
+        window.addEventListener("resize", handleWindowResize);
+
+        return () => {
+            window.removeEventListener("resize", handleWindowResize);
+        };
+    }, []);
+
+    console.log();
+
+    useEffect(() => {
+        if (!activeTab && !initedRef.current) {
+            initedRef.current = true;
+            setActiveTab(new URLSearchParams(location.search).get("tab") || "all");
+        }
+    }, []);
+
+    const onSelectInput = (event) => {
+        setActiveTab(event.target.value);
+    };
+
+    let sizes = 0;
+    const onSize = (size) => {
+        sizes += size;
+    };
+
+    useEffect(() => {
+        const newHasRightScroll = sizes > ref.current.offsetWidth;
+        if (newHasRightScroll !== hasRightScroll) {
+            setHasRightScroll(newHasRightScroll);
+        }
+    }, [activeTab]);
+
+    const onArrowCLick = () => {
+        const scroller = ref.current.querySelector(".section__panel:not(.section__panel_hidden)");
+        if (scroller) {
+            scroller.scrollBy({
+                left: 400,
+                behavior: "smooth",
+            });
+        }
+    };
+
+    return (
+        <section className="section main__devices">
+            <div className="section__title">
+                <h2 className="section__title-header">Избранные устройства</h2>
+                {!windowSize && (
                     <select className="section__select" defaultValue="all" onInput={onSelectInput}>
                         {TABS_KEYS.map((key) => (
                             <option key={key} value={key}>
@@ -292,7 +321,8 @@ const Main = () => {
                             </option>
                         ))}
                     </select>
-
+                )}
+                {windowSize && (
                     <ul role="tablist" className="section__tabs">
                         {TABS_KEYS.map((key) => (
                             <li
@@ -309,33 +339,25 @@ const Main = () => {
                             </li>
                         ))}
                     </ul>
+                )}
+            </div>
+            <div className="section__panel-wrapper" ref={ref}>
+                <div
+                    key={activeTab}
+                    role="tabpanel"
+                    className={"section__panel"}
+                    aria-hidden={"false"}
+                    id={`panel_${activeTab}`}
+                    aria-labelledby={`tab_${activeTab}`}
+                >
+                    <ul className="section__panel-list">
+                        {TABS[activeTab] &&
+                            TABS[activeTab].items.map((item, index) => <Event key={index} {...item} onSize={onSize} />)}
+                    </ul>
                 </div>
 
-                <div className="section__panel-wrapper" ref={ref}>
-                    {TABS_KEYS.map((key) => {
-                        return (
-                            key === activeTab && (
-                                <div
-                                    key={key}
-                                    role="tabpanel"
-                                    className={"section__panel"}
-                                    aria-hidden={"false"}
-                                    id={`panel_${key}`}
-                                    aria-labelledby={`tab_${key}`}
-                                >
-                                    <ul className="section__panel-list">
-                                        {TABS[key].items.map((item, index) => (
-                                            <Event key={index} {...item} onSize={onSize} />
-                                        ))}
-                                    </ul>
-                                </div>
-                            )
-                        );
-                    })}
-                    {hasRightScroll && <div className="section__arrow" onClick={onArrowCLick}></div>}
-                </div>
-            </section>
-        </main>
+                {hasRightScroll && <div className="section__arrow" onClick={onArrowCLick}></div>}
+            </div>
+        </section>
     );
 };
-export default Main;
